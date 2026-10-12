@@ -1,0 +1,39 @@
+---
+import Logo from "./Logo.astro";
+
+// The hero is a Roler template. Each line holds its markup tokens (.s1-tok) next to the parts that
+// only exist once rendered (.s1-rtok); the page script compiles it by adding .ren to the section.
+// Keep every line's spans on one source line: whitespace between them would show up as gaps.
+---
+
+<section class="msg s1" id="s1" aria-label="Roler">
+  <div class="s1-doc">
+    <div class="s1-line s1-id" style="--i:0"><span class="s1-rtok" aria-hidden="true"><Logo class="logo" /></span><span class="s1-tok">[webhook name="</span><span>Roler</span><span class="s1-tok">" avatar=roler.png]</span><span class="s1-rtok"><span class="s1-app">APP</span></span></div>
+    <h1 class="s1-line s1-h" style="--i:1"><span class="s1-tok"># </span><span class="s1-title" contenteditable="plaintext-only" spellcheck="false" id="s1-title">Role panels, written like a message.</span><span class="s1-caret" id="s1-caret" aria-hidden="true"></span><span class="s1-edited" id="s1-edited">(edited)</span></h1>
+    <p class="s1-line s1-p" style="--i:2">Write your panel in chat with markdown and buttons. Right-click to post it. Edit the message anytime to update the live panel.</p>
+    <div class="s1-line s1-row" style="--i:3"><span class="s1-tok">[button color=blurple url=…]</span><a class="s1-btn blurple" href="https://discord.com/oauth2/authorize?client_id=1488089368924000367" target="_blank" rel="noopener noreferrer">Add to Discord</a><span class="s1-tok">[/button]</span> <span class="s1-tok">[button color=grey url=…]</span><a class="s1-btn grey" href="https://gh.seria.moe/roler/" target="_blank" rel="noopener noreferrer">Read the docs</a><span class="s1-tok">[/button]</span></div>
+    <div class="s1-line s1-sep" style="--i:4"><span class="s1-tok">---</span></div>
+    <div class="s1-line s1-tokline" style="--i:5"><div><span class="s1-tok">[section]</span></div></div>
+    <div class="s1-line s1-section" style="--i:6"><div class="s1-small"><span class="s1-tok">-# </span>Free, open source, and self-hostable.</div><div><span class="s1-tok">[button color=grey emoji=&lt;:github:1424016406512533614&gt; url=…]</span><a class="s1-btn grey sm" href="https://github.com/seriaati/roler" target="_blank" rel="noopener noreferrer"><span class="s1-rtok" aria-hidden="true"><svg class="s1-emoji" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></span>View on GitHub</a><span class="s1-tok">[/button]</span></div></div>
+    <div class="s1-line s1-tokline" style="--i:7"><div><span class="s1-tok">[/section]</span></div></div>
+  </div>
+</section>
+
+<script>
+  // the headline is editable, like editing the template message; Discord marks it "(edited)"
+  const title = document.getElementById("s1-title")!;
+  const caret = document.getElementById("s1-caret")!;
+  const edited = document.getElementById("s1-edited")!;
+  const original = title.textContent;
+  title.addEventListener("focus", () => caret.classList.add("gone"));
+  title.addEventListener("input", () => {
+    edited.classList.toggle("on", title.textContent!.trim() !== original);
+    document.dispatchEvent(new Event("roler:measure"));
+  });
+  title.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); title.blur(); }
+  });
+  title.addEventListener("blur", () => {
+    if (!title.textContent!.trim()) { title.textContent = original; edited.classList.remove("on"); }
+  });
+</script>

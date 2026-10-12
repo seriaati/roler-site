@@ -1,0 +1,156 @@
+---
+// Reusable templates: two template messages (right) opened from panels in three channels (left).
+// Editing a template updates every private copy that is open.
+---
+
+<section class="msg sec" id="templates" aria-labelledby="tpl-h">
+  <h2 class="sec-h" id="tpl-h">Private sub-menus</h2>
+  <p class="sec-p">Put large role lists behind a button using <code>[button template=...]</code>. Members get a private menu, and buttons turn green for roles they already have.</p>
+  <div class="sec-body">
+    <div class="tr">
+      <div class="tr-panels dc" id="tr-panels"></div>
+      <div class="tr-defs" id="tr-defs" aria-label="Template messages"></div>
+    </div>
+    <p class="tp-note">Click a button to open a private menu. Edit the template on the right to watch it update.</p>
+  </div>
+</section>
+
+<script>
+  import { EYE, esc, highlight, messageHtml, now, parse, render, type Parsed } from "../lib/markup";
+
+  const DEFS = [
+    { id: "games", src: `[template id=games stateful=true on=green]
+## 🎮 Games
+-# Green means you have the role.
+[button emoji=💥]Genshin Impact[/button]
+[button emoji=🚂]Star Rail[/button]
+[button emoji=💤]Zenless Zone Zero[/button]` },
+    { id: "pronouns", src: `[template id=pronouns stateful=true]
+## 🏷️ Pronouns
+[button]he/him[/button]
+[button]she/her[/button]
+[button]they/them[/button]
+[button]any/all[/button]` },
+  ];
+  const CHANNELS = [
+    { id: "welcome", src: `# Welcome to Night Owls
+Grab what you like, change it anytime.
+[button template=games emoji=🎮]Games[/button]
+[button template=pronouns emoji=🏷️]Pronouns[/button]` },
+    { id: "events", src: `## 🎉 Game night, Friday 9pm
+Tell us what you play so we can plan teams.
+[button color=green emoji=✋]Going[/button]
+[button template=games color=grey emoji=🎮]My games[/button]` },
+    { id: "introductions", src: `## 👋 Say hi
+Let people know what to call you.
+[button template=pronouns emoji=🏷️]Set pronouns[/button]` },
+  ];
+
+  type Slot = { id: string; time: string } | { reply: string; time: string } | null;
+  interface Channel { id: string; src: string; time: string; slot: Slot }
+  interface Def { id: string; live: Parsed; liveSrc: string; box: HTMLElement }
+
+  const trPanels = document.getElementById("tr-panels")!, trDefs = document.getElementById("tr-defs")!;
+  // the visitor's roles, shared by every copy
+  const has = new Set(["genshin impact", "they/them"]);
+  const channels: Channel[] = CHANNELS.map(c => ({ ...c, time: now(), slot: null }));
+
+  trPanels.innerHTML = channels.map(c => `<div class="tp" data-ch="${c.id}"><div class="tp-chan"># ${c.id}</div><div class="dc-view">${messageHtml({}, render(parse(c.src).comps), { time: c.time })}</div><div class="dc-srcview">${messageHtml({}, `<pre class="dc-src">${highlight(c.src)}</pre>`, { time: c.time })}</div><div class="tr-slot"></div></div>`).join("");
+  trDefs.innerHTML = DEFS.map(d => `<div class="ed tr-def" data-id="${d.id}"><div class="ed-label"><span>#mod-templates <span class="tr-ed" hidden>(edited)</span></span></div><div class="ed-area"><pre class="ed-hl" aria-hidden="true"></pre><textarea class="ed-ta" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Template ${d.id} markup"></textarea></div><p class="tr-dm" hidden></p></div>`).join("");
+
+  const defs: Record<string, Def> = {};
+  for (const d of DEFS) {
+    const box = trDefs.querySelector<HTMLElement>(`[data-id="${d.id}"]`)!;
+    defs[d.id] = { id: d.id, live: parse(d.src), liveSrc: d.src, box };
+  }
+
+  function slotHtml(slot: NonNullable<Slot>) {
+    const foot = `<div class="dc-foot">${EYE}Only you can see this · <button type="button" data-dismiss>Dismiss message</button></div>`;
+    if ("reply" in slot) return `<div class="dc-eph">${messageHtml({}, `<div class="dc-text"><p>${slot.reply}</p></div>`, { foot, time: slot.time })}</div>`;
+    const d = defs[slot.id], t = d.live.meta.template!;
+    const body = render(d.live.comps, { stateful: t.stateful === "true", on: t.on, off: t.off, has });
+    return `<div class="dc-eph"><div class="dc-view">${messageHtml({}, body, { foot, time: slot.time })}</div><div class="dc-srcview">${messageHtml({}, `<pre class="dc-src">${highlight(d.liveSrc)}</pre>`, { foot, time: slot.time })}</div></div>`;
+  }
+
+  // "open" = a new private message (fades in), "upd" = its template was edited (flashes), else redraw in place
+  function drawSlot(c: Channel, how?: "open" | "upd") {
+    const el = trPanels.querySelector<HTMLElement>(`[data-ch="${c.id}"] .tr-slot`)!;
+    el.innerHTML = c.slot ? slotHtml(c.slot) : "";
+    el.classList.remove("upd");
+    el.style.animation = "none";
+    if (how === "open") { void el.offsetWidth; el.style.animation = ""; }
+    if (how === "upd") { void el.offsetWidth; el.classList.add("upd"); }
+  }
+  const openCopy = (c: Channel) => (c.slot && "id" in c.slot ? c.slot.id : null);
+
+  for (const d of Object.values(defs)) {
+    const ta = d.box.querySelector("textarea")!, hl = d.box.querySelector(".ed-hl")!, dm = d.box.querySelector<HTMLElement>(".tr-dm")!;
+    ta.value = d.liveSrc;
+    hl.innerHTML = highlight(d.liveSrc);
+    ta.addEventListener("input", () => {
+      hl.innerHTML = highlight(ta.value);
+      const res = parse(ta.value), errs = [...res.errors];
+      if (!errs.length && !res.meta.template) errs.push(`Line 1: without the [template] tag this message stops being a template.`);
+      else if (!errs.length && res.meta.template!.id !== d.id) errs.push(`Line 1: the panels here open this template as "${d.id}". Keep that id to see them update.`);
+      if (errs.length) {
+        dm.hidden = false;
+        dm.innerHTML = `<b>✉ DM from Roler:</b> edit not applied. ${esc(errs[0])}`;
+        return;
+      }
+      dm.hidden = true;
+      d.live = res;
+      d.liveSrc = ta.value;
+      d.box.querySelector<HTMLElement>(".tr-ed")!.hidden = false;
+      for (const c of channels) if (openCopy(c) === d.id) drawSlot(c, "upd");
+    });
+  }
+
+  // hovering a template button lights up its definition, and the other way round
+  function light(id: string | null) {
+    trDefs.querySelectorAll<HTMLElement>(".tr-def").forEach(b => b.classList.toggle("lit", b.dataset.id === id));
+    trPanels.querySelectorAll<HTMLElement>('.dc-view button[data-kind="template"]').forEach(b => b.classList.toggle("ref", b.dataset.key === id));
+  }
+  const linkFrom = (e: Event) => {
+    const b = (e.target as Element).closest<HTMLElement>('button[data-kind="template"], .tr-def');
+    light(b ? (b.dataset.key || b.dataset.id || null) : null);
+  };
+  for (const el of [trPanels, trDefs]) {
+    el.addEventListener("pointerover", linkFrom);
+    el.addEventListener("focusin", linkFrom);
+    el.addEventListener("pointerleave", () => light(null));
+    el.addEventListener("focusout", () => light(null));
+  }
+
+  trPanels.addEventListener("click", e => {
+    const target = e.target as Element;
+    const box = target.closest<HTMLElement>("[data-ch]");
+    if (!box) return;
+    const c = channels.find(x => x.id === box.dataset.ch)!;
+    if (target.closest("[data-dismiss]")) { c.slot = null; drawSlot(c); return; }
+    const b = target.closest<HTMLElement>("button.dc-btn");
+    if (!b || b.getAttribute("aria-disabled")) return;
+    const { kind, key = "", label = "" } = b.dataset;
+    if (kind === "template") {
+      c.slot = { id: key, time: now() };
+      drawSlot(c, "open");
+      const def = defs[key].box;
+      def.classList.remove("flash"); void def.offsetWidth; def.classList.add("flash");
+      return;
+    }
+    if (kind !== "role") return;
+    const had = has.has(key);
+    had ? has.delete(key) : has.add(key);
+    if (b.closest(".tr-slot")) {
+      // the member's roles changed: every open copy shows the new state
+      for (const x of channels) if (openCopy(x)) drawSlot(x);
+      trPanels.querySelector<HTMLElement>(`[data-ch="${c.id}"] .tr-slot .dc-view button[data-key="${CSS.escape(key)}"]`)?.focus({ preventScroll: true });
+    } else {
+      c.slot = { reply: `✅ ${had ? "Removed" : "Added"} <b>${esc(label)}</b>.`, time: now() };
+      drawSlot(c, "open");
+    }
+  });
+
+  // start with one copy open so the reuse is visible straight away
+  channels[0].slot = { id: "games", time: now() };
+  drawSlot(channels[0]);
+</script>

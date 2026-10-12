@@ -1,0 +1,55 @@
+---
+// The remaining features, each with the syntax or action behind it.
+const features = [
+  {
+    title: "Components v2",
+    body: "Stack markdown text, thumbnail sections, galleries, dividers, and buttons in any order.",
+    hint: "[section] [gallery] [separator]",
+    icon: "<rect x=\"3\" y=\"3\" width=\"18\" height=\"5\" rx=\"1.5\"/><rect x=\"3\" y=\"11\" width=\"10\" height=\"10\" rx=\"1.5\"/><path d=\"M16.5 12h4.5M16.5 16h4.5M16.5 20h3\"/>",
+  },
+  {
+    title: "Safe live sync",
+    body: "Edit your message to update the panel. Invalid edits stay in your DMs so live panels never break.",
+    hint: "Auto-sync + error DMs",
+    icon: "<path d=\"M4 20v-4L15 5l4 4L8 20z\"/><path d=\"M12.5 7.5l4 4M14 20h6\"/>",
+  },
+  {
+    title: "Match roles by name",
+    body: "Buttons match server roles by label text. Supply role IDs only when you need to.",
+    hint: "[button]Announcements[/button]",
+    icon: "<rect x=\"2.5\" y=\"4\" width=\"16\" height=\"8\" rx=\"3\"/><path d=\"M13 11l8 3-3.4 1.4L16.2 19z\"/>",
+  },
+  {
+    title: "Stateful buttons",
+    body: "Buttons turn green for roles the member already has, and update immediately when clicked.",
+    hint: "stateful=true on=green",
+    icon: "<circle cx=\"12\" cy=\"12\" r=\"9.5\"/><circle cx=\"12\" cy=\"10\" r=\"3.2\"/><path d=\"M6.4 19.2a6.5 6.5 0 0 1 11.2 0\"/>",
+  },
+  {
+    title: "Plain text templates",
+    body: "Save setups in staff channels or Git. Copy and paste them to set up new servers instantly.",
+    hint: "Plain text · Portable",
+    icon: "<rect x=\"8\" y=\"8\" width=\"13\" height=\"13\" rx=\"2\"/><path d=\"M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3\"/>",
+  },
+  {
+    title: "Right-click controls",
+    body: "Right-click any template message to create, edit, or delete a panel. No setup wizard needed.",
+    hint: "Apps › Create Role Panel",
+    icon: "<rect x=\"6\" y=\"2.5\" width=\"12\" height=\"19\" rx=\"6\"/><path class=\"f\" d=\"M12 2.5a6 6 0 0 1 6 6v1h-6z\"/><path d=\"M6 9.5h12M12 2.5v7\"/>",
+  },
+];
+---
+
+<section class="sec" id="details" aria-labelledby="det-h">
+  <h2 class="sec-h" id="det-h">The details add up.</h2>
+  <div class="sec-body ft">
+    {features.map(f => (
+      <div class="ft-i">
+        <svg class="ft-ic" viewBox="0 0 24 24" aria-hidden="true" set:html={f.icon} />
+        <h3>{f.title}</h3>
+        <p>{f.body}</p>
+        <code>{f.hint}</code>
+      </div>
+    ))}
+  </div>
+</section>

@@ -1,0 +1,178 @@
+---
+// Live playground: edit Roler markup on the left, see the panel Roler would post on the right.
+---
+
+<section class="sec" id="write" aria-labelledby="write-h">
+  <h2 class="sec-h" id="write-h">Try it live</h2>
+  <p class="sec-p">Edit the template on the left to preview the panel on the right. Invalid edits stay in your DMs so live panels never break.</p>
+  <div class="sec-body">
+    <div class="pg-tabs" id="pg-tabs" role="group" aria-label="Example templates"></div>
+    <div class="pg">
+      <div class="ed">
+        <div class="ed-label"><span>#roles</span></div>
+        <div class="ed-area">
+          <pre class="ed-hl" id="pg-hl" aria-hidden="true"></pre>
+          <textarea class="ed-ta" id="pg-ta" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Template markup"></textarea>
+        </div>
+        <div class="ed-hist" id="pg-hist" aria-label="Edit history"></div>
+      </div>
+      <div class="pv">
+        <div class="ed-label"><span>#roles</span></div>
+        <div class="pv-in dc">
+          <div class="pv-dm" id="pg-dm" hidden></div>
+          <div id="pg-panel"></div>
+          <div id="pg-toast"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { EYE, esc, highlight, messageHtml, parse, render, type Parsed } from "../lib/markup";
+
+  const PRESETS = [
+    { id: "three", name: "Name matching", src: `# Pick your pings
+-# Button labels match role names automatically.
+[button color=blurple]Announcements[/button]
+[button color=blurple]Events[/button]` },
+    { id: "welcome", name: "Game & Rules Hub", src: `# Welcome to the server
+Grab some roles to unlock relevant channels.
+
+## 🎮 Games
+-# You'll get pinged for updates and co-op.
+[button emoji=💥 color=grey mode=add]Genshin Impact[/button]
+[button emoji=🚂 color=grey mode=add]Star Rail[/button]
+[button emoji=💤 color=grey mode=add]Zenless Zone Zero[/button]
+
+---
+
+## 🌐 Languages
+#general is English only. Grab a role to chat in yours.
+[button color=grey]English[/button]
+[button color=grey]中文[/button]
+[button color=grey]Tiếng Việt[/button]
+[button color=grey]Español[/button]` },
+    { id: "advanced", name: "Advanced", src: `[webhook name="Night Owls" avatar=https://images.unsplash.com/photo-1522120657009-060ca01afcd6]
+[section]
+# 🦉 Night Owls
+Roles, pings and menus, all in one place.
+[thumbnail url=https://images.unsplash.com/photo-1522120657009-060ca01afcd6]
+[/section]
+
+[gallery]
+[item url=https://images.unsplash.com/photo-1593305841991-05c297ba4575]
+[item url=https://images.unsplash.com/photo-1746635732312-0083b7f9423f]
+[item url=https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf]
+[/gallery]
+
+[separator size=small visible=false]
+[button disabled=true color=grey]Ping me for:[/button]
+[button mode=add color=green emoji=📢]Announcements[/button]
+[button mode=add color=green emoji=🎉]Game nights[/button]
+
+---
+
+[section]
+-# Regions, pronouns and games each have their own menu.
+[button template=menu emoji=📂]Open menu[/button]
+[/section]
+
+[button url=https://discord.gg/example emoji=🔗]Invite a friend[/button]` },
+  ];
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const ta = $("pg-ta") as HTMLTextAreaElement, hl = $("pg-hl"), panel = $("pg-panel"), dm = $("pg-dm"), toast = $("pg-toast");
+  const hist = $("pg-hist"), tabs = $("pg-tabs");
+  let versions: { src: string; at: string }[] = [], current = 0, live: Parsed | null = null, pgHas = new Set<string>(), edits = 0;
+  let histTimer: number | undefined, toastTimer: number | undefined;
+  const clock = () => new Date().toTimeString().slice(0, 8);
+
+  function paint() {
+    hl.innerHTML = highlight(ta.value);
+    hl.scrollTop = ta.scrollTop;
+  }
+
+  // like the bot: a bad edit is DMed to the author and the live panel stays as it was
+  function apply(fromEdit: boolean) {
+    const res = parse(ta.value);
+    if (res.errors.length) {
+      dm.hidden = false;
+      const shown = res.errors.slice(0, 4);
+      dm.innerHTML = `<b>✉ DM from Roler</b>Your edit wasn't applied:<ul>${shown.map(e => `<li>${esc(e)}</li>`).join("")}</ul>${res.errors.length > shown.length ? `and ${res.errors.length - shown.length} more.` : ""}`;
+      if (!live) panel.innerHTML = "";
+      return;
+    }
+    dm.hidden = true;
+    if (fromEdit) edits++;
+    live = res;
+    panel.innerHTML = messageHtml(res.meta, render(res.comps), { edited: edits > 0 });
+  }
+
+  function drawHist() {
+    hist.innerHTML = "<span>History</span>" + versions.map((v, i) =>
+      `<button type="button" data-v="${i}" title="Saved ${v.at}"${i === current ? ' aria-current="true"' : ""}>v${i + 1}</button>`).join("");
+  }
+
+  function snapshot() {
+    // an edit that lands on a version already in the history selects it instead of duplicating it
+    const same = versions.findIndex(v => v.src === ta.value);
+    if (same >= 0) { current = same; drawHist(); return; }
+    versions.push({ src: ta.value, at: clock() });
+    if (versions.length > 8) versions.splice(1, 1);
+    current = versions.length - 1;
+    drawHist();
+  }
+
+  hist.addEventListener("click", e => {
+    const b = (e.target as Element).closest<HTMLElement>("button[data-v]");
+    if (!b) return;
+    clearTimeout(histTimer);
+    current = +b.dataset.v!;
+    ta.value = versions[current].src;
+    paint(); apply(true);
+    drawHist();
+  });
+
+  function loadPreset(p: (typeof PRESETS)[number]) {
+    ta.value = p.src; ta.scrollTop = 0;
+    versions = []; edits = 0; live = null; pgHas = new Set(); toast.innerHTML = "";
+    for (const b of tabs.children) b.setAttribute("aria-pressed", String((b as HTMLElement).dataset.id === p.id));
+    paint(); apply(false); snapshot();
+  }
+
+  for (const p of PRESETS) {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = p.name; b.dataset.id = p.id;
+    b.addEventListener("click", () => loadPreset(p));
+    tabs.append(b);
+  }
+
+  ta.addEventListener("input", () => {
+    paint(); apply(true);
+    clearTimeout(histTimer);
+    histTimer = window.setTimeout(() => { if (!parse(ta.value).errors.length) snapshot(); }, 900);
+  });
+  ta.addEventListener("scroll", () => { hl.scrollTop = ta.scrollTop; });
+
+  // clicking a button in the panel gets the private reply Roler would send
+  function ephemeral(html: string) {
+    toast.innerHTML = `<div class="pv-toast">${messageHtml({}, `<div class="dc-text"><p>${html}</p></div>`, { foot: `<div class="dc-foot">${EYE}Only you can see this</div>` })}</div>`;
+    clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => { toast.innerHTML = ""; }, 3600);
+  }
+  panel.addEventListener("click", e => {
+    const b = (e.target as Element).closest<HTMLElement>("button.dc-btn");
+    if (!b || b.getAttribute("aria-disabled")) return;
+    const { kind, key = "", label = "", mode } = b.dataset;
+    const name = `<b>${esc(label)}</b>`;
+    if (kind === "template") return ephemeral(`Opens the <b>${esc(key)}</b> template, privately. There's a working one in the next section.`);
+    const has = pgHas.has(key);
+    if (mode === "add" && has) return ephemeral(`You already have ${name}.`);
+    if (mode === "remove" && !has) return ephemeral(`You don't have ${name}.`);
+    has ? pgHas.delete(key) : pgHas.add(key);
+    ephemeral(`✅ ${has ? "Removed" : "Added"} ${name}.`);
+  });
+
+  loadPreset(PRESETS[1]);
+</script>
