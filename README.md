@@ -1,5 +1,5 @@
 # roler-site
 
-Official website for the [Roler](https://github.com/seriaati/roler) Discord bot. Built with Astro and Tailwind CSS.
+Official website for the [Roler](https://github.com/seriaati/roler) Discord bot. Built with Astro.
 
 URL: <https://roler.seria.moe>
