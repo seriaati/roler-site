@@ -82,7 +82,8 @@ a { color: inherit; }
 .s1-doc { display: flex; flex-direction: column; }
 .s1.typing .s1-line { animation: s1-type .5s var(--out) both; animation-delay: calc(var(--i) * 140ms); }
 @keyframes s1-type { from { opacity: 0; clip-path: inset(0 100% 0 0); } to { opacity: 1; clip-path: inset(0 0 0 0); } }
-.s1-id { display: flex; align-items: center; }
+.s1-id { display: flex; flex-wrap: wrap; align-items: center; }
+.s1-name { white-space: nowrap; }
 .logo { display: block; width: 30px; height: 30px; margin-right: 10px; color: var(--ink); fill: currentColor; }
 .s1-app { font: 600 10px/1 var(--ui); letter-spacing: .04em; background: var(--blurple); color: #fff; padding: 3px 5px 2px; border-radius: 4px; margin-left: 8px; }
 .ren .s1-id { font-size: 1.05rem; }
